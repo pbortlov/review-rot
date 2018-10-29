@@ -3,11 +3,13 @@ import json
 import logging
 import time
 
-from collections import OrderedDict
+from collections import OrderedDict, namedtuple
 
 from dateutil.relativedelta import relativedelta
 
 log = logging.getLogger(__name__)
+
+LastComment = namedtuple('LastComment', ('author', 'body', 'created_at'))
 
 
 class BaseService(object):
@@ -87,6 +89,18 @@ class BaseService(object):
                 raise ValueError("Invalid duration type: %s" % duration)
         return True
 
+    def has_new_comments(self, last_activity, days):
+        today = datetime.datetime.now()
+
+        if last_activity and days:
+            delta = today - last_activity
+            if delta.days < days:
+                return True
+            else:
+                return False
+
+
+
     def _decode_response(self, response):
         """
         Remove Gerrit's prefix and convert to JSON.
@@ -164,13 +178,16 @@ class BaseService(object):
 
 class BaseReview(object):
     def __init__(self, user=None, title=None, url=None,
-                 time=None, comments=None, image=None):
+                 time=None, comments=None, image=None, last_comment=None, project_name=None, project_url=None):
         self.user = user
         self.title = title
         self.url = url
         self.time = time
         self.comments = comments
         self.image = image
+        self.last_comment = last_comment
+        self.project_name = project_name
+        self.project_url = project_url
 
     @staticmethod
     def format_duration(created_at):

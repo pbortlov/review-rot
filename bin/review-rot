@@ -1,14 +1,22 @@
 #!/usr/bin/env python
-
 import argparse
 import logging
 import operator
+import datetime
 import os
 import urllib
 
+from reviewrot.mailer import Mailer
 from reviewrot import GerritService, get_git_service
 from reviewrot import get_arguments, load_config_file
 from os.path import expanduser
+from jinja2 import FileSystemLoader, Environment
+from reviewrot.basereview import BaseReview
+
+format_duration = BaseReview.format_duration
+
+import warnings
+warnings.filterwarnings("ignore", module='urllib')
 
 log = logging.getLogger(__name__)
 
@@ -76,6 +84,7 @@ def main(cli_args, valid_choices):
                         state_=arguments.get('state'),
                         value=arguments.get('value'),
                         duration=arguments.get('duration'),
+                        last_commented=arguments.get('last_commented'),
                         token=token,
                         host=item.get('host'),
                         ssl_verify=arguments.get('ssl_verify', False),
@@ -83,12 +92,15 @@ def main(cli_args, valid_choices):
                 )
 
     # Now, with all results in place, sort them and print
+    if arguments.get('comment_sort'):
+        sort_by = lambda result: result.last_comment.created_at if result.last_comment else datetime.datetime.utcfromtimestamp(0)
+    else:
+        sort_by = operator.attrgetter('time')
     sorted_results = sorted(
         results,
-        key=operator.attrgetter('time'),
+        key=sort_by,
         reverse=arguments.get('reverse'),
     )
-
     formatting = arguments.get('format', 'oneline')
 
     n = len(results)
@@ -96,6 +108,31 @@ def main(cli_args, valid_choices):
     for i, result in enumerate(sorted_results):
         print(result.format(style=formatting, i=i, N=n))
     print(report_suffixes[formatting])
+
+    if arguments.get('irc'):
+        # TODO
+
+
+        log.debug("SENT")
+
+    if args.email:
+        log.debug("SENDING MAIL")
+
+        loader = FileSystemLoader(searchpath='reviewrot/')
+
+        env = Environment(loader=loader)
+        env.filters['formatduration'] = format_duration
+
+        TEMPLATE_FILE = "html_template.jinja"
+        template = env.get_template(TEMPLATE_FILE)
+
+        ouputText = template.render({"results" : sorted_results})
+
+        mailer = Mailer()
+
+        mailer.send(args.email, "review-rot notification", ouputText)
+        log.debug("EMAIL SENT")
+
 
 
 def format_user_repo_name(data, git_service):
@@ -158,10 +195,21 @@ if __name__ == '__main__':
                         default=None,
                         choices=format_choices,
                         help='Choose from one of a few different styles.')
+    parser.add_argument('--last-commented',
+                        default=None,
+                        type=int,
+                        help='Display results with X days of inactivity')
     parser.add_argument('--reverse', action='store_true',
                         help='Display results with the latest first.')
+    parser.add_argument('--comment-sort', action='store_true',
+                        help='Display results with the latest comments first.')
     parser.add_argument('--debug', action='store_true',
                         help='Display debug logs on console')
+    parser.add_argument('--irc', action='store_true',
+                        help='send output to irc')
+    parser.add_argument('--email', nargs="+",
+                        default=None,
+                        help='send output to list of email adresses')
 
     ssl_group = parser.add_argument_group('SSL')
     ssl_group.add_argument('-k', '--insecure',

@@ -4,6 +4,7 @@ import requests
 from datetime import datetime
 
 from reviewrot.basereview import BaseReview, BaseService
+from basereview import LastComment
 
 log = logging.getLogger(__name__)
 
@@ -19,7 +20,7 @@ class GerritService(BaseService):
 
     def request_reviews(self, host, repo_name, state_=None,
                         user_name=None, token=None, value=None,
-                        duration=None, ssl_verify=True):
+                        duration=None, last_commented=None, ssl_verify=True):
         """
         Creates a Gerrit object.
         Requests pull requests for specified repo name.
@@ -52,7 +53,7 @@ class GerritService(BaseService):
             review_response = self._call_api(url=request_url,
                                              ssl_verify=ssl_verify)
             reviews = self.format_response(review_response, state_, value,
-                                           duration)
+                                           duration, last_commented)
         return reviews
 
     def check_repo_exists(self, repo_name, ssl_verify):
@@ -117,7 +118,27 @@ class GerritService(BaseService):
 
         return total_comments
 
-    def format_response(self, decoded_responses, state_, value, duration):
+
+    def get_last_comment(self, change_id):
+
+        request_url = "{}/changes/{}/comments".format(self.url, str(change_id))
+        decoded_response = self._call_api(request_url, ignore_err=True)
+        comments = []
+        for response in decoded_response:
+            if response is not '/COMMIT_MSG':
+                messages = decoded_response.get(response)
+                last_comment_date = datetime.strptime(messages[-1]['updated'][:-3],
+                                             "%Y-%m-%d %H:%M:%S.%f")
+                comments.append(LastComment(author=messages[-1]['author']['username'], body=messages[-1]['message'], created_at=last_comment_date))
+
+        for comment in comments:
+            if comment.created_at == max([date.created_at for date in comments]):
+                return comment
+
+
+
+
+    def format_response(self, decoded_responses, state_, value, duration, last_commented):
         """
         Formats the pull requests details and print it on console.
         Args:
@@ -134,14 +155,24 @@ class GerritService(BaseService):
         """
         res_ = []
         for decoded_response in decoded_responses:
+
             created_date = datetime.strptime(decoded_response['created'][:-3],
                                              "%Y-%m-%d %H:%M:%S.%f")
             result = self.check_request_state(created_date, state_, value,
                                               duration)
+            last_comment = self.get_last_comment(decoded_response['id'])
+
             if result is False:
                 log.debug("Change request '%s' is not %s than specified "
                           "time interval", decoded_response['subject'], state_)
                 continue
+
+            if last_comment and last_commented:
+                if self.has_new_comments(last_comment.created_at, last_commented):
+                    log.debug("pull request '%s' has new comments in last %s days", decoded_response['subject'], last_commented)
+                    continue
+
+
             owner = decoded_response['owner']
             change_number = decoded_response['_number']
             res = GerritReview(user=owner.get('username', owner.get('email')),
@@ -151,6 +182,8 @@ class GerritService(BaseService):
                                time=created_date,
                                comments=self.get_comments_count(
                                    decoded_response['id']),
+                               last_comment=last_comment,
+                               project_name=decoded_response['project'],
                                # XXX - I don't know how to find gerrit avatars
                                # for now.  Can we figure this out later?
                                image=GerritReview.logo)

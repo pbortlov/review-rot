@@ -19,6 +19,8 @@ setup(name='review-rot',
           'PyYAML',
           'dateutils',
           'python-gitlab>=1.6.0',
+          'sopel',
+          'Jinja2'
       ],
       tests_require=[
           'nose',

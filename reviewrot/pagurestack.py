@@ -11,6 +11,7 @@ except ImportError:
 import requests
 
 from reviewrot.basereview import BaseReview, BaseService
+from basereview import LastComment
 
 log = logging.getLogger(__name__)
 
@@ -22,7 +23,7 @@ class PagureService(BaseService):
         self.header = None
 
     def request_reviews(self, user_name, repo_name=None, state_=None,
-                        value=None, duration=None, host=None, token=None,
+                        value=None, duration=None, last_commented=None, host=None, token=None,
                         ssl_verify=True, **kwargs):
         """
         Fetches merge requests by making API calls for specified
@@ -77,6 +78,12 @@ class PagureService(BaseService):
                                               res['project']['name'])
             except:
                 repo_reference = res['project']['name']
+
+
+
+
+            last_comment = self.get_last_comment(res)
+
             # format pull request url
             url = os.path.join('https://pagure.io/', repo_reference,
                                'pull-request', str(res['id']))
@@ -98,15 +105,36 @@ class PagureService(BaseService):
                 log.debug("pull request '%s' is not %s than specified"
                           " time interval", res['title'], state_)
                 continue
+
+            if last_comment and last_commented:
+                if self.has_new_comments(last_comment.created_at, last_commented):
+                    log.debug("pull request '%s' has new comments in last %s days", res['title'], last_commented)
+                    continue
+
+            project_url = os.path.join('https://pagure.io/', repo_reference)
             res = PagureReview(user=res['user']['name'],
                                title=res['title'],
                                url=url,
                                time=date,
                                comments=len(res['comments']),
-                               image=self._avatar(res['user']['name']))
+                               image=self._avatar(res['user']['name']),
+                               last_comment=last_comment,
+                               project_name=repo_reference,
+                               project_url=project_url)
             log.debug(res)
             res_.append(res)
         return res_
+
+
+    def get_last_comment(self, res):
+
+        comments = res['comments']
+        if comments:
+            last_comment = comments[-1]
+            last_comment_date = datetime.datetime.utcfromtimestamp(int(last_comment['date_created'])).strftime('%Y-%m-%d %H:%M:%S')
+            last_comment_date = datetime.datetime.strptime(last_comment_date, '%Y-%m-%d %H:%M:%S')
+
+            return LastComment(author=str(last_comment['user']['name']), body=str(last_comment['comment']), created_at=last_comment_date)
 
     @staticmethod
     def _avatar(username):

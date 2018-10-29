@@ -5,6 +5,7 @@ import datetime
 from reviewrot.basereview import BaseService, BaseReview
 from gitlab.exceptions import GitlabGetError
 from distutils.version import LooseVersion
+from basereview import  LastComment
 
 log = logging.getLogger(__name__)
 
@@ -15,7 +16,7 @@ class GitlabService(BaseService):
      https://docs.gitlab.com/ee/api/
     """
     def request_reviews(self, user_name, repo_name=None, state_=None,
-                        value=None, duration=None, token=None, host=None,
+                        value=None, duration=None, last_commented=None, token=None, host=None,
                         ssl_verify=True, **kwargs):
         """
         Creates a gitlab object.
@@ -76,7 +77,7 @@ class GitlabService(BaseService):
             # get merge requests for specified username and project name
             res = self.get_reviews(uname=user_name, project=project,
                                    state_=state_, value=value,
-                                   duration=duration)
+                                   duration=duration, last_commented=last_commented)
             # extend in case of a non empty result
             if res:
                 response.extend(res)
@@ -97,14 +98,14 @@ class GitlabService(BaseService):
                 for project in projects:
                     res = self.get_reviews(uname=user_name, project=project,
                                            state_=state_, value=value,
-                                           duration=duration)
+                                           duration=duration, last_commented=last_commented)
                 # extend in case of a non empty result
                 if res:
                     response.extend(res)
         return response
 
     def get_reviews(self, uname, project, state_=None,
-                    value=None, duration=None):
+                    value=None, duration=None, last_commented=None):
         """
         Fetches merge requests for specified username(groupname)
         and repo(project) name.
@@ -137,20 +138,34 @@ class GitlabService(BaseService):
                       uname, project.name)
         res_ = []
         for mr in merge_requests:
+
+
+            last_comment = self.get_last_comment(mr)
+
             try:
                 mr_date = datetime.datetime.strptime(
                     mr.created_at, '%Y-%m-%dT%H:%M:%S.%fZ')
+
             except ValueError:
                 mr_date = datetime.datetime.strptime(
                     mr.created_at, '%Y-%m-%dT%H:%M:%SZ')
+
             """ check if review request is older/newer than specified time
             interval"""
-            result = self.check_request_state(mr_date,
-                                              state_, value, duration)
+            result = self.check_request_state(mr_date, state_, value, duration)
+
             if result is False:
                 log.debug("merge request '%s' is not %s than specified"
                           " time interval", mr.title, state_)
                 continue
+
+            if last_comment and last_commented:
+                if self.has_new_comments(last_comment.created_at, last_commented):
+                    log.debug("merge request '%s' has new comments  in last %s days", mr.title, last_commented)
+                    continue
+
+
+
             res = GitlabReview(user=mr.author['username'],
                                title=mr.title,
                                url=mr.web_url,
@@ -158,10 +173,23 @@ class GitlabService(BaseService):
                                comments=mr.user_notes_count,
                                # XXX - I don't know how to find gitlab avatars
                                # for now.  Can we figure this out later?
-                               image=GitlabReview.logo)
+                               image=GitlabReview.logo,
+                               last_comment=last_comment,
+                               project_name=project.name,
+                               project_url =project.web_url)
+
             log.debug(res)
             res_.append(res)
         return res_
+
+
+    def get_last_comment(self, mr):
+        mr_notes = mr.notes.list()
+        for note in mr_notes:
+            if note.system == False:
+                return LastComment(author=note.author['username'], body=note.body,
+                                    created_at=datetime.datetime.strptime(
+                                    note.created_at, '%Y-%m-%dT%H:%M:%S.%fZ'))
 
 
 class GitlabReview(BaseReview):
