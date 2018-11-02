@@ -1,33 +1,91 @@
+<html>
 <head>
-<style>
-table, th, td {
-    border: 1px solid black;
-}
-
-table {
-    border-collapse: collapse;
-}
-
-</style>
+    <style>
+     table td {
+        border-spacing: 5px;
+        background-color: #f0f0f0;
+     }
+     span a {
+        color: #F0F0F0!important;
+        text-decoration: none!important;
+     }
+     .project a {
+        text-transform: uppercase;
+     }
+     a:hover{
+        text-decoration: underline!important;
+     }
+     .button {
+        border: none;
+        padding: 5px;
+        text-align: center;
+        text-decoration: none;
+        border-radius: 4px;
+        font-weight: bold;
+        height: 100%;
+        width: 100%;
+        display: inline-block;
+     }
+     .b1 {
+        background-color: #3D8BCD;
+        color: #FCFCFC;
+     }
+     .b2 {
+        background-color: #CCCCCC;
+        color: #4D4D4D;
+     }
+     .author{
+        width: 20%;
+        margin: 10px;
+     }
+     .comment{
+        padding: 10px;
+        background-color: #f8f8f8;
+        color: #5C5C5C;
+     }
+    </style>
 </head>
+<body>
+    <table>
+        {% for result in results %}
+        <tr>
+            <td>
+                <button class="button b1">
+                    <span class="project">
+                        <a href={{ result.project_url }}>{{ result.project_name }}:</a>
+                    </span>
+                    <span>
+                        <a href={{ result.url }}>{{ result.title }}</a>
+                    </span>
+                </button>
+            </td>
+            <td>
+                <button class="button b2 author">Author: {{ result.user }}</button>
+            </td>
+            <td>
+                <button class="button b1">Opened: {{ result.time | formatduration }} ago</button>
+            </td>
+        </tr>
+        <tr>
+            <td>
+                <button class="button b2">#Comments: {{ result.comments }}</button>
+            </td>
+            {% if result.last_comment %}
 
-<table>
-    {% for result in results %}
-    <tr>
-        <td>{{ result.project_name }} ({{ result.project_url }})</td>
-        <td>{{ result.title }} ({{ result.url }})</td>
-        <td>{{ result.user }}</td>
-        <td>{{ result.time | formatduration }} ago</td>
-    </tr>
-    <tr style="background-color: #f2f2f2;border-bottom: 5px solid #000;">
-        <td> #Comments: {{ result.comments }}</td>
-        {% if result.last_comment %}
-        <td>{{ result.last_comment.author }} : {{ result.last_comment.body }}</td>
-        <td>{{ result.last_comment.created_at | formatduration }} ago</td>
-        {% else %}
-        <td>No comment for this Merge Request</td>
-        <td></td>
-        {% endif %}
-    </tr>
-    {% endfor %}
-</table>
+                <td class="comment">
+                    {{ result.last_comment.author }}: {{ result.last_comment.body }}
+                </td>
+                <td>
+                    <button class="button b2">
+                        Commented: {{ result.last_comment.created_at | formatduration }} ago
+                    </button>
+                </td>
+            {% else %}
+                <td>No comment for this Merge Request</td>
+                <td></td>
+            {% endif %}
+        </tr>
+        {% endfor %}
+    </table>
+</body>
+</html>
