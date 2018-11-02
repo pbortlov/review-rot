@@ -103,11 +103,12 @@ def main(cli_args, valid_choices):
     )
     formatting = arguments.get('format', 'oneline')
 
-    n = len(results)
-    print(report_prefixes[formatting])
-    for i, result in enumerate(sorted_results):
-        print(result.format(style=formatting, i=i, N=n))
-    print(report_suffixes[formatting])
+    if not arguments.get('irc') and not args.email:
+        n = len(results)
+        print(report_prefixes[formatting])
+        for i, result in enumerate(sorted_results):
+            print(result.format(style=formatting, i=i, N=n,show_last_comment=arguments.get('show_last_comment')))
+        print(report_suffixes[formatting])
 
     if arguments.get('irc'):
         # TODO
@@ -126,7 +127,7 @@ def main(cli_args, valid_choices):
         TEMPLATE_FILE = "html_template.jinja"
         template = env.get_template(TEMPLATE_FILE)
 
-        ouputText = template.render({"results" : sorted_results})
+        ouputText = template.render({"results" : sorted_results, 'show_last_comment' : arguments.get('show_last_comment') })
 
         mailer = Mailer()
 
@@ -203,6 +204,8 @@ if __name__ == '__main__':
                         help='Display results with the latest first.')
     parser.add_argument('--comment-sort', action='store_true',
                         help='Display results with the latest comments first.')
+    parser.add_argument('--show-last-comment', action='store_true',
+                        help='Add information about last comment to output')
     parser.add_argument('--debug', action='store_true',
                         help='Display debug logs on console')
     parser.add_argument('--irc', action='store_true',
@@ -227,6 +230,12 @@ if __name__ == '__main__':
     options = (args.state, args.value, args.duration)
     if any(options) and not all(options):
         parser.error('Either no or all arguments are required')
+
+    if (args.format == 'oneline' or args.format == 'indented') and args.show_last_comment:
+        parser.error(args.format + " format doesn't support last comment funcionality")
+
+    if (args.email or args.irc) and args.format:
+        parser.error("Not format shuld be specified when selecting email or irc output")
 
     if args.debug:
         logging.basicConfig(level=logging.DEBUG)

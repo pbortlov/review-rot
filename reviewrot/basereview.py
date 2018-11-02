@@ -227,7 +227,7 @@ class BaseReview(object):
     def since(self):
         return self.format_duration(created_at=self.time)
 
-    def format(self, style, i, N):
+    def format(self, style, i, N, show_last_comment=False):
         """
         Format the result in a given style.
         Args:
@@ -238,11 +238,11 @@ class BaseReview(object):
             fromatted_string(str): Formatted string as per style
         """
         lookup = {
-            'oneline': self._format_oneline,
-            'indented': self._format_indented,
-            'json': self._format_json,
+            'oneline': self._format_oneline(i, N),
+            'indented': self._format_indented(i, N),
+            'json': self._format_json(i, N, show_last_comment),
         }
-        return lookup[style](i, N)
+        return lookup[style]
 
     def _format_oneline(self, i, N):
         """
@@ -286,7 +286,7 @@ class BaseReview(object):
 
         return string
 
-    def _format_json(self, i, N):
+    def _format_json(self, i, N, show_last_comment):
         """
         Format the result in json style.
         Args:
@@ -298,10 +298,10 @@ class BaseReview(object):
         import json
         # Include a comma after every entry, except the last.
         suffix = ',' if i < N - 1 else ''
-        return json.dumps(self.__json__(), indent=2) + suffix
+        return json.dumps(self.__json__(show_last_comment), indent=2) + suffix
 
-    def __json__(self):
-        return {
+    def __json__(self, show_last_comment):
+        data =  {
             'user': self.user,
             'title': self.title,
             'url': self.url,
@@ -311,3 +311,11 @@ class BaseReview(object):
             'type': type(self).__name__,
             'image': self.image,
         }
+
+        if self.last_comment and show_last_comment:
+            data['last_comment'] = {  'author': self.last_comment.author,
+                                      'body': self.last_comment.body,
+                                      'created_at': time.mktime(self.last_comment.created_at.timetuple())
+                                   }
+
+        return data

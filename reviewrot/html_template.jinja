@@ -66,6 +66,7 @@
                 <button class="button b1">Opened: {{ result.time | formatduration }} ago</button>
             </td>
         </tr>
+        {% if show_last_comment %}
         <tr>
             <td>
                 <button class="button b2">#Comments: {{ result.comments }}</button>
@@ -81,9 +82,10 @@
                     </button>
                 </td>
             {% else %}
-                <td>No comment for this Merge Request</td>
+                <td class="comment">No comment for this Merge Request</td>
                 <td></td>
             {% endif %}
+        {% endif %}
         </tr>
         {% endfor %}
     </table>
