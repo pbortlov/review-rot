@@ -2,14 +2,19 @@
 <head>
     <style>
      table {
-        width:100%;
+        width:auto;
+        height:100%;
      }
      table td {
         border-spacing: 5px;
-        background-color: #f0f0f0;
+     }
+     .comment{
+        padding: 10px;
+        color: #5c5c5c;
+        background-color: #f8f8f8;
      }
      span a {
-        color: #F0F0F0!important;
+        color: #ffffff!important;
         text-decoration: none!important;
      }
      .project a {
@@ -30,22 +35,17 @@
         display: inline-block;
      }
      .b1 {
-        background-color: #3D8BCD;
-        color: #FCFCFC;
+        background-color: #3d8bcd;
+        color: #ffffff;
      }
      .b2 {
-        background-color: #CCCCCC;
-        color: #4D4D4D;
+        background-color: #e6e6e6;
+        color: #4d4d4d;
      }
      .author{
-        width: auto;
-        margin: 10px;
+        text-align: right;
      }
-     .comment{
-        padding: 10px;
-        background-color: #f8f8f8;
-        color: #5C5C5C;
-     }
+
     </style>
 </head>
 <body>
@@ -86,7 +86,11 @@
                 </td>
             {% else %}
                 <td class="comment">No comment for this Merge Request</td>
-                <td></td>
+                <td>
+                    <button class="button b2">
+                        Commented: None
+                    </button>
+                </td>
             {% endif %}
         </tr>
         {% endif %}
