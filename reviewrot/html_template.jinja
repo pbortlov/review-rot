@@ -2,95 +2,76 @@
 <head>
     <style>
      table {
+        border-spacing: 3px;
         width:auto;
-        height:100%;
      }
-     table td {
-        border-spacing: 5px;
+     td {
+        border: none;
+        padding: 2px;
+        text-align: center;
+        text-decoration: none;
+        border-radius: 4px;
+     }
+     .blue {
+        background-color: #3d8bcd;
+        color: #ffffff;
+        font-weight: bold;
+     }
+     .grey {
+        background-color: #e6e6e6;
+        color: #4d4d4d;
+        font-weight: bold;
      }
      .comment{
         padding: 10px;
         color: #5c5c5c;
         background-color: #f8f8f8;
+        text-align: left;
+     }
+     .author{
+        text-align: right;
+        padding: 10px;
      }
      span a {
         color: #ffffff!important;
         text-decoration: none!important;
      }
-     .project a {
-        text-transform: uppercase;
-     }
      a:hover{
         text-decoration: underline!important;
      }
-     .button {
-        border: none;
-        padding: 5px;
-        text-align: center;
-        text-decoration: none;
-        border-radius: 4px;
-        font-weight: bold;
-        height: 100%;
-        width: 100%;
-        display: inline-block;
+     .f1{
+        text-transform: uppercase;
      }
-     .b1 {
-        background-color: #3d8bcd;
-        color: #ffffff;
-     }
-     .b2 {
-        background-color: #e6e6e6;
-        color: #4d4d4d;
-     }
-     .author{
-        text-align: right;
-     }
-
     </style>
 </head>
 <body>
     <table>
         {% for result in results %}
         <tr>
-            <td>
-                <button class="button b1">
-                    <span class="project">
-                        <a href={{ result.project_url }}>{{ result.project_name }}:</a>
-                    </span>
-                    <span>
-                        <a href={{ result.url }}>{{ result.title }}</a>
-                    </span>
-                </button>
+            <td class="blue">
+                <span>
+                    <a href="{{ result.project_url }}" class="f1">{{ result.project_name }}:</a>
+                    <a href="{{ result.url }}">{{ result.title }}</a>
+                </span>
             </td>
-            <td>
-                <button class="button b2 author">Author: {{ result.user }}</button>
-            </td>
-            <td>
-                <button class="button b1">Opened: {{ result.time | formatduration }} ago</button>
-            </td>
+            <td class="grey author">Author: {{ result.user }}</td>
+            <td class="blue">Opened: {{ result.time | formatduration }} ago</td>
         </tr>
         {% if show_last_comment %}
         <tr>
-            <td>
-                <button class="button b2">#Comments: {{ result.comments }}</button>
+            <td class="grey">
+                #Comments: {{ result.comments }}
             </td>
             {% if result.last_comment %}
-
                 <td class="comment">
                     {{ result.last_comment.author }}: {{ result.last_comment.body }}
                 </td>
-                <td>
-                    <button class="button b2">
-                        Commented: {{ result.last_comment.created_at | formatduration }} ago
-                    </button>
+                <td class="grey">
+                    Commented: {{ result.last_comment.created_at | formatduration }} ago
                 </td>
             {% else %}
                 <td class="comment">No comment for this Merge Request</td>
-                <td>
-                    <button class="button b2">
-                        Commented: None
-                    </button>
-                </td>
+                <td class="grey">Commented: None</td>
             {% endif %}
         </tr>
         {% endif %}
