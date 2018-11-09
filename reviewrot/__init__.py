@@ -88,26 +88,29 @@ def get_arguments(cli_arguments, config_arguments, choices):
         # specify arguments from command line. If not specified, value will
         # be False or None. In this case, if these arguments are specified in
         # config file, then the value will be taken from the config file.
-        if config_arguments.get('debug'):
+        if cli_arguments.debug or config_arguments.get('debug'):
             parsed_arguments['debug'] = True
 
-        if config_arguments.get('reverse'):
+        if cli_arguments.reverse or config_arguments.get('reverse'):
             parsed_arguments['reverse'] = True
 
-        parsed_arguments['ssl_verify'] = False if cli_arguments.insecure \
-            else cli_arguments.cacert
-
-        if parsed_arguments.get('ssl_verify') is None:
-            if config_arguments.get('insecure'):
-                parsed_arguments['ssl_verify'] = not \
-                    config_arguments.get('insecure')
-            elif 'cacert' in config_arguments:
-                # expand ~, environment variables, etc if it's a path
-                parsed_arguments['ssl_verify'] = config_arguments.get('cacert')
+        # if it is insecure unspecified we looks straight to certificates
+        if not cli_arguments.insecure and\
+           not config_arguments.get('insecure', False):
+            # if the certificate is specified in CLI
+            # use the path to certificate
+            if cli_arguments.cacert:
+                parsed_arguments['ssl_verify'] = cli_arguments.cacert
+            # Use certificate's path from the config file
+            # or use default user certificates.
+            # The default value for ssl_verify is True for the system.
+            # If get() function doesn't find the path return True
             else:
-                parsed_arguments['ssl_verify'] = False
-
-
+                parsed_arguments['ssl_verify'] = config_arguments.\
+                    get('ssl_verify', True)
+        else:
+            parsed_arguments['ssl_verify'] = False
+        # return absolute path
         if isinstance(parsed_arguments['ssl_verify'], str):
             parsed_arguments['ssl_verify'] = \
                 expanduser(expandvars(parsed_arguments['ssl_verify']))
@@ -187,7 +190,7 @@ def read_input_with_timeout(prompt, timeout=10):
 
     rlist, _, _ = select([sys.stdin], [], [], timeout)
     if rlist:
-        return sys.stdin.readline ()
+        return sys.stdin.readline()
     else:
         return 'n'
 
