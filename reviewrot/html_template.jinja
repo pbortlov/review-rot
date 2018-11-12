@@ -2,15 +2,14 @@
 <head>
     <style>
      table {
-        border-spacing: 3px;
-        width:auto;
+        width: 50%;
+        margin: 0 auto;
      }
      td {
-        border: none;
-        padding: 2px;
-        text-align: center;
+        border-top: 1px solid grey;
+        padding: 3px;
+        text-align: left;
         text-decoration: none;
-        border-radius: 4px;
      }
      .blue {
         background-color: #3d8bcd;
@@ -22,61 +21,62 @@
         color: #4d4d4d;
         font-weight: bold;
      }
-     .comment{
-        padding: 10px;
+     p.comment {
         color: #5c5c5c;
-        background-color: #f8f8f8;
-        text-align: left;
-     }
-     .author{
-        text-align: right;
+        display: block;
         padding: 10px;
      }
      span a {
-        color: #ffffff!important;
+        color: #222222!important;
         text-decoration: none!important;
+        text-align: center;
+        font-weight:normal;
      }
      a:hover{
         text-decoration: underline!important;
      }
      .f1{
         text-transform: uppercase;
+        color: #3453A8!important;
+        font-weight: bold;
+     }
+     p {
+        padding: 0px 3px;
+        margin: 0px;
+        color: #545454;
+     }
+     h3 {
+        padding: 0px;
+        margin: 3px;
      }
     </style>
 </head>
 <body>
     <table>
-        {% for result in results %}
+    {% for result in results %}
         <tr>
-            <td class="blue">
-                <span>
-                    <a href="{{ result.project_url }}" class="f1">{{ result.project_name }}:</a>
-                    <a href="{{ result.url }}">{{ result.title }}</a>
-                </span>
+            <td>
+                <h3>
+                    <span>
+                        <a href="{{ result.project_url }}" class="f1">{{ result.project_name }}:</a>
+                        <a href="{{ result.url }}">{{ result.title }}</a>
+                    </span>
+                </h3>
+                {% if result.comments == 1 %}
+                    <p>Opened by <strong>{{ result.user }}</strong> {{ result.time | formatduration }} ago,                 with {{ result.comments }} comment</p>
+                {% else %}
+                    <p>Opened by <strong>{{ result.user }}</strong> {{ result.time | formatduration }} ago,                 with {{ result.comments }} comments</p>
+                {% endif %}
+                {% if result.last_comment %}
+                    <p>Last comment by <strong>{{ result.last_comment.author }}</strong> {{ result.last_comment.created_at | formatduration }} ago</p>
+                    {% if show_last_comment %}
+                    <p class="comment">{{ result.last_comment.body }}</p>
+                    {% endif %}
+                {% endif %}
             </td>
-            <td class="grey author">Author: {{ result.user }}</td>
-            <td class="blue">Opened: {{ result.time | formatduration }} ago</td>
         </tr>
-        {% if show_last_comment %}
-        <tr>
-            <td class="grey">
-                #Comments: {{ result.comments }}
-            </td>
-            {% if result.last_comment %}
-                <td class="comment">
-                    {{ result.last_comment.author }}: {{ result.last_comment.body }}
-                </td>
-                <td class="grey">
-                    Commented: {{ result.last_comment.created_at | formatduration }} ago
-                </td>
-            {% else %}
-                <td class="comment">No comment for this Merge Request</td>
-                <td class="grey">Commented: None</td>
-            {% endif %}
-        </tr>
-        {% endif %}
-
-        {% endfor %}
+    {% endfor %}
     </table>
+
 </body>
 </html>
